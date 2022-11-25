@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+pip3 install statsmodels
+pip3 install matplotlib_venn
+Rscript -e 'options(warn=2); devtools::install_github("donaldtmcknight/microDecon")'
+# set to 1 in order to run the full simulations and cancer prediction pipelines
+RUN_SIMULATIONS=0
+RUN_FULL_PREDICTIONS=0
+
+mkdir ../results/data
+mkdir ../results/data/Fig_1
+mkdir ../results/data/Fig_4
+
+Rscript Fig2/run_decontaminations.R "$@" 
+Rscript Fig2/decontaminate_second_plate.R "$@" 
+
+if [ $RUN_SIMULATIONS -eq 1 ]
+then
+	## if specified, run the more computationally expensive analyses
+	Rscript Fig1/Run_Fig1_Simulations.R
+	Rscript Fig4/Fig4_Simulations.R
+else
+	echo 'Copying results from precomputed simulations...'
+	cp ../data/Precomputed_simulations/Fig_1/* ../results/data/Fig_1/
+	#cp ../data/Precomputed_simulations/F1_Simulation_Results.csv ../results/data/Fig_1/
+	#cp ../data/Precomputed_simulations/No_contamination_removed_taxa.csv ../results/data/Fig_1/
+	#cp ../data/Precomputed_simulations/no_contamination_simulation.csv ../results/data/Fig_1/
+	cp ../data/Precomputed_simulations/Fig_4_Simulations.csv ../results/data/Fig_4/
+	cp ../data/Precomputed_simulations/Fig_S7_Simulations.csv ../results/data/Fig_4/
+fi
+
+if [ $RUN_FULL_PREDICTIONS -eq 1]
+then
+	Rscript Tumor/decontaminate_cancers.R "$@"
+	python3 Tumor/run_cancer_preds.py
+	Rscript Plasma/Run_plasma_deconts_and_preds.R
+else
+	echo 'Copying precomputed Tumor results'
+	cp -r ../data/Precomputed_results/Tumor ../results/data/Tumor
+	echo 'Copying precomputed Plasma results'
+	cp -r ../data/Precomputed_results/Fig3_plasma ../results/data/Fig3_plasma
+fi
+
+
+mkdir ../results/Plots
+mkdir ../results/Supplementary_figures
+mkdir ../results/Supplementary_figures/Well_to_well
+mkdir ../results/Supplementary_figures/Plasma_all
+python3 Plot_generation/__init__.py 
+Rscript Plot_generation/figs2_VD.R "$@" 
+
+
