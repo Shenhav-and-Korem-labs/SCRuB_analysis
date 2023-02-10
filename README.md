@@ -1,2 +1,2 @@
 # SCRuB_analysis
-repository summarizing the analysis from the SCRuB manuscript
+Repository summarizing the analysis from the SCRuB manuscript.
